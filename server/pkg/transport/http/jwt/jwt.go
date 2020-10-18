@@ -1,4 +1,4 @@
-package http
+package jwt
 
 import (
 	"time"
@@ -30,7 +30,7 @@ func (i *Issuer) Issue(id string) (string, error) {
 		"nbf": time.Now().Unix(),
 	})
 
-	return token.SignedString(i.secret)
+	return token.SignedString([]byte(i.secret))
 }
 
 // IsValid checks if token is valid JWT issued by issuer i
@@ -38,6 +38,9 @@ func (i *Issuer) IsValid(token string) (bool, error) {
 	t, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return []byte(i.secret), nil
 	})
+	if err != nil {
+		return false, err
+	}
 	if t.Valid {
 		return true, nil
 	} else if ve, ok := err.(*jwt.ValidationError); ok {

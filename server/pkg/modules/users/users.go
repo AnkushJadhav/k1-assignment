@@ -13,20 +13,29 @@ const (
 	emailTpl = "^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$"
 )
 
+// ServiceError is the generic data type to hold business logic errors
+type ServiceError struct {
+	err string
+}
+
+func (e *ServiceError) Error() string {
+	return e.err
+}
+
 // Create validates and adds a user to the system
 func Create(db persistance.Client, name, email, password string) (*models.User, error) {
 	var err error
 	err = validateName(name)
 	if err != nil {
-		return nil, err
+		return nil, &ServiceError{err.Error()}
 	}
 	err = validateEmail(email)
 	if err != nil {
-		return nil, err
+		return nil, &ServiceError{err.Error()}
 	}
 	err = validatePassword(password)
 	if err != nil {
-		return nil, err
+		return nil, &ServiceError{err.Error()}
 	}
 
 	// generate user id
@@ -35,13 +44,19 @@ func Create(db persistance.Client, name, email, password string) (*models.User, 
 		return nil, err
 	}
 
+	exists, err := db.GetUser(&models.User{
+		Email: email,
+	})
+	if !utils.IsZeroOfUnderlyingType(exists) {
+		return nil, &ServiceError{"user with this email already exists"}
+	}
+
 	user := &models.User{
 		ID:       id,
 		Name:     name,
 		Email:    email,
 		Password: password,
 		Hits:     0,
-		IsActive: true,
 	}
 
 	return db.CreateUser(user)
@@ -52,23 +67,23 @@ func Update(db persistance.Client, user *models.User) error {
 	return db.UpdateUser(user)
 }
 
-// Delete removes a user from the system. Soft delete is performed
-func Delete(db persistance.Client, user *models.User) error {
-	user.IsActive = false
-	return db.UpdateUser(user)
+// DeleteMultiple removes users from the system. Soft delete is performed
+func DeleteMultiple(db persistance.Client, users []models.User) error {
+	return db.DeleteUsers(users)
 }
 
 // GetDetails gets the user details by id
 func GetDetails(db persistance.Client, id string) (*models.User, error) {
-	return db.GetUserByID(id)
+	return db.GetUser(&models.User{
+		ID: id,
+	})
 }
 
 // GetMultiple gets multiple users based on criteria
 func GetMultiple(db persistance.Client, pageIndex, pageSize int, sortTerms, searchTerms map[string]string) ([]models.User, error) {
 	user := models.User{
-		Name:     searchTerms["name"],
-		Email:    searchTerms["email"],
-		IsActive: true,
+		Name:  searchTerms["name"],
+		Email: searchTerms["email"],
 	}
 
 	sort := make([]persistance.Sorter, 0)

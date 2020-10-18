@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/AnkushJadhav/k1-assignment/server/pkg/persistance"
+	"github.com/AnkushJadhav/k1-assignment/server/pkg/transport/http/jwt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,8 +15,9 @@ import (
 type Server struct {
 	engine   *gin.Engine
 	bindIP   net.IP
-	bindPort uint
+	bindPort int
 	store    persistance.Client
+	issuer   *jwt.Issuer
 }
 
 // New creates a Server to run on ip and port
@@ -32,19 +34,35 @@ func New(ip, port string) (*Server, error) {
 	return &Server{
 		engine:   gin.Default(),
 		bindIP:   parsedIP,
-		bindPort: uint(parsedPort),
+		bindPort: parsedPort,
 	}, nil
+}
+
+// SetAuth adds a JWT auth isuer and validator
+func (s *Server) SetAuth(secret string) {
+	iss := jwt.NewIssuer(secret)
+	s.issuer = iss
+	return
 }
 
 // SetStore adds a persistant store client to the server
 func (s *Server) SetStore(db persistance.Client) {
 	s.store = db
+	return
 }
 
-// AttachInternalRoutes attaches the internal - authenticated routes to the server
-func (s *Server) AttachInternalRoutes(authenticator gin.HandlerFunc) {
-	internalGrp := s.engine.Group("/api", authenticator)
-	setInternalRoutes(internalGrp, s.store)
+// Start starts the HTTP server
+func (s *Server) Start() error {
+	return s.engine.Run(s.bindIP.String() + ":" + strconv.Itoa(s.bindPort))
+}
+
+// AttachRoutes attaches the routes to the server
+func (s *Server) AttachRoutes() {
+	authGrp := s.engine.Group("/auth")
+	s.setAuthRoutes(authGrp)
+
+	apiGrp := s.engine.Group("/api")
+	s.setAPIRoutes(apiGrp)
 }
 
 // AttachExternalRoutes attaches the external - unauthenticated routes to the server

@@ -29,7 +29,7 @@ type Paginator struct {
 type Client interface {
 	CreateUser(user *models.User) (*models.User, error)
 	UpdateUser(user *models.User) error
-	DeleteUser(user *models.User) error
+	DeleteUsers(users []models.User) error
 	GetUser(*models.User) (*models.User, error)
 	GetUsers(filter models.User, sort []Sorter, pg Paginator) ([]models.User, error)
 }

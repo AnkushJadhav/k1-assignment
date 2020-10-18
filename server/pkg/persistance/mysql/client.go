@@ -35,16 +35,23 @@ func (db *Client) UpdateUser(user *models.User) error {
 	return result.Error
 }
 
-// DeleteUser deletes a user from the users table
-func (db *Client) DeleteUser(user *models.User) error {
-	result := db.Delete(user)
+// DeleteUsers deletes a user from the users table
+func (db *Client) DeleteUsers(users []models.User) error {
+	result := db.Delete(&models.User{}, users)
 	return result.Error
 }
 
 // GetUser fetches a user from the users table
-func (db *Client) GetUser(user *models.User) (*models.User, error) {
-	result := db.First(user)
-	return user, result.Error
+func (db *Client) GetUser(query *models.User) (*models.User, error) {
+	user := &models.User{}
+	result := db.Where(query).Find(user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, nil
+	}
+	return user, nil
 }
 
 // GetUsers fetches multiple users from the user table with optional filter
@@ -56,7 +63,6 @@ func (db *Client) GetUsers(filter models.User, sort []persistance.Sorter, pg per
 	if !utils.IsZeroOfUnderlyingType(filter.Email) {
 		db.Where("email LIKE ?", "%"+filter.Email+"%")
 	}
-	db.Where("is_active = ?", filter.IsActive)
 
 	// prepare sort statements
 	for _, s := range sort {
