@@ -20,6 +20,8 @@ func New(dsn string) (*Client, error) {
 		return nil, err
 	}
 
+	db = db.Debug()
+
 	return &Client{db}, nil
 }
 
@@ -31,7 +33,7 @@ func (db *Client) CreateUser(user *models.User) (*models.User, error) {
 
 // UpdateUser edits the user in the users table
 func (db *Client) UpdateUser(user *models.User) error {
-	result := db.Save(user)
+	result := db.Updates(user)
 	return result.Error
 }
 
@@ -56,25 +58,28 @@ func (db *Client) GetUser(query *models.User) (*models.User, error) {
 
 // GetUsers fetches multiple users from the user table with optional filter
 func (db *Client) GetUsers(filter models.User, sort []persistance.Sorter, pg persistance.Paginator) ([]models.User, error) {
+	tx := db.DB
 	// prepare filter statments
 	if !utils.IsZeroOfUnderlyingType(filter.Name) {
-		db.Where("name LIKE ?", "%"+filter.Name+"%")
+		tx = tx.Where("name LIKE ?", "%"+filter.Name+"%")
 	}
 	if !utils.IsZeroOfUnderlyingType(filter.Email) {
-		db.Where("email LIKE ?", "%"+filter.Email+"%")
+		tx = tx.Where("email LIKE ?", "%"+filter.Email+"%")
 	}
 
 	// prepare sort statements
 	for _, s := range sort {
-		db.Order(s.Attr + " " + string(s.Direction))
+		tx = tx.Order(s.Attr + " " + string(s.Direction))
 	}
+	tx = tx.Order("id asc")
 
 	// prepare pagination
-	offset := pg.PageSize * (pg.Index + 1)
-	db.Offset(offset)
-	db.Limit(pg.PageSize)
+	if pg.Index != "" {
+		tx = tx.Where("id > ?", pg.Index)
+	}
+	tx = tx.Limit(pg.PageSize)
 
 	var users []models.User
-	result := db.Find(users)
+	result := tx.Find(&users)
 	return users, result.Error
 }

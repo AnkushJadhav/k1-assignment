@@ -71,3 +71,18 @@ func LoginHandler(store persistance.Client, iss *jwt.Issuer) gin.HandlerFunc {
 		return
 	}
 }
+
+// LogoutHandler logs the user out by deleting the auth cookie
+func LogoutHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		cookie, err := c.Cookie("Authentication")
+		if err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+
+		c.SetCookie("Authentication", cookie, -1, "/", "", false, true)
+		c.Status(http.StatusOK)
+		return
+	}
+}

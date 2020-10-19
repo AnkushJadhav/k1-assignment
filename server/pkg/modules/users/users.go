@@ -3,6 +3,7 @@ package users
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/AnkushJadhav/k1-assignment/server/pkg/models"
 	"github.com/AnkushJadhav/k1-assignment/server/pkg/persistance"
@@ -23,17 +24,17 @@ func (e *ServiceError) Error() string {
 }
 
 // Create validates and adds a user to the system
-func Create(db persistance.Client, name, email, password string) (*models.User, error) {
+func Create(db persistance.Client, user *models.User) (*models.User, error) {
 	var err error
-	err = validateName(name)
+	err = validateName(user.Name)
 	if err != nil {
 		return nil, &ServiceError{err.Error()}
 	}
-	err = validateEmail(email)
+	err = validateEmail(user.Email)
 	if err != nil {
 		return nil, &ServiceError{err.Error()}
 	}
-	err = validatePassword(password)
+	err = validatePassword(user.Password)
 	if err != nil {
 		return nil, &ServiceError{err.Error()}
 	}
@@ -45,19 +46,14 @@ func Create(db persistance.Client, name, email, password string) (*models.User, 
 	}
 
 	exists, err := db.GetUser(&models.User{
-		Email: email,
+		Email: user.Email,
 	})
 	if !utils.IsZeroOfUnderlyingType(exists) {
 		return nil, &ServiceError{"user with this email already exists"}
 	}
 
-	user := &models.User{
-		ID:       id,
-		Name:     name,
-		Email:    email,
-		Password: password,
-		Hits:     0,
-	}
+	user.ID = id
+	user.Hits = 0
 
 	return db.CreateUser(user)
 }
@@ -67,7 +63,7 @@ func Update(db persistance.Client, user *models.User) error {
 	return db.UpdateUser(user)
 }
 
-// DeleteMultiple removes users from the system. Soft delete is performed
+// DeleteMultiple removes users from the system
 func DeleteMultiple(db persistance.Client, users []models.User) error {
 	return db.DeleteUsers(users)
 }
@@ -80,7 +76,7 @@ func GetDetails(db persistance.Client, id string) (*models.User, error) {
 }
 
 // GetMultiple gets multiple users based on criteria
-func GetMultiple(db persistance.Client, pageIndex, pageSize int, sortTerms, searchTerms map[string]string) ([]models.User, error) {
+func GetMultiple(db persistance.Client, pageIndex string, pageSize int, sortTerms []string, searchTerms map[string]string) ([]models.User, error) {
 	user := models.User{
 		Name:  searchTerms["name"],
 		Email: searchTerms["email"],
@@ -89,13 +85,16 @@ func GetMultiple(db persistance.Client, pageIndex, pageSize int, sortTerms, sear
 	sort := make([]persistance.Sorter, 0)
 	for _, term := range sortTerms {
 		var sortStyle persistance.SortStyle
-		if sortTerms[term] == "asc" {
+		split := strings.Split(term, ":")
+		if len(split) == 1 {
 			sortStyle = persistance.ASC
-		} else {
+		} else if split[1] == "desc" {
 			sortStyle = persistance.DESC
+		} else {
+			sortStyle = persistance.ASC
 		}
 		sort = append(sort, persistance.Sorter{
-			Attr:      term,
+			Attr:      split[0],
 			Direction: sortStyle,
 		})
 	}

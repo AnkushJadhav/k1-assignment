@@ -22,7 +22,7 @@ type Sorter struct {
 // Paginator represents the pagination when fetching multiple records
 type Paginator struct {
 	PageSize int
-	Index    int
+	Index    string
 }
 
 // Client is an interface that the application data persistance provider must implement
