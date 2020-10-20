@@ -104,7 +104,13 @@ func GetMultiple(db persistance.Client, pageIndex string, pageSize int, sortTerm
 		Index:    pageIndex,
 	}
 
-	return db.GetUsers(user, sort, pg)
+	users, err := db.GetUsers(user, sort, pg)
+	if err != nil {
+		return nil, err
+	}
+	go increaseHitCount(db, 1, users)
+
+	return users, nil
 }
 
 // validateName checks whether name is valid
@@ -135,4 +141,12 @@ func validatePassword(password string) error {
 		return fmt.Errorf("Password has to be atleast 10 characters long")
 	}
 	return nil
+}
+
+// increaseHitCount increases the hitcount for a user record by cnt
+func increaseHitCount(db persistance.Client, cnt int, data []models.User) {
+	for _, user := range data {
+		user.Hits = user.Hits + cnt
+		db.UpdateUser(&user)
+	}
 }

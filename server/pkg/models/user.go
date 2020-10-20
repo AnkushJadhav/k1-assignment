@@ -10,7 +10,7 @@ type User struct {
 	Name      string    `gorm:"not null" validate:"required"`
 	Email     string    `gorm:"not null,unique" validate:"required"`
 	Password  string    `gorm:"not null" validate:"required"`
-	Hits      uint      `gorm:"not null,default:0"`
+	Hits      int       `gorm:"not null,default:0"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 }
