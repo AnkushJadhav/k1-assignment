@@ -33,20 +33,15 @@ func JWTAuthenticator(iss *jwt.Issuer) gin.HandlerFunc {
 
 // LoginHandler provides the HTTP handler for login
 func LoginHandler(store persistance.Client, iss *jwt.Issuer) gin.HandlerFunc {
-	type body struct {
+	type reqBody struct {
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required,min=10"`
 	}
 	return func(c *gin.Context) {
-		inp := &body{}
+		inp := &reqBody{}
 		err := c.BindJSON(inp)
 		if err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		if ok, errs := utils.ValidateData(*inp); !ok {
-			c.AbortWithStatusJSON(http.StatusBadRequest, utils.JSONResponse(false, nil, errs))
 			return
 		}
 

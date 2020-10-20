@@ -14,21 +14,16 @@ import (
 
 // CreateUserHandler provides the HTTP handler for creating a user
 func CreateUserHandler(store persistance.Client) gin.HandlerFunc {
-	type body struct {
+	type reqBody struct {
 		Name     string `json:"name" validate:"required"`
 		Email    string `json:"email" validate:"required,email"`
 		Password string `json:"password" validate:"required,min=10"`
 	}
 	return func(c *gin.Context) {
-		inp := &body{}
+		inp := &reqBody{}
 		err := c.BindJSON(inp)
 		if err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		if ok, errs := utils.ValidateData(*inp); !ok {
-			c.AbortWithStatusJSON(http.StatusBadRequest, utils.JSONResponse(false, nil, errs))
 			return
 		}
 
@@ -77,7 +72,7 @@ func GetUserByIDHandler(store persistance.Client) gin.HandlerFunc {
 
 // GetUsersHandler provides the HTTP handler for fetching multiple users with pagination, search and sort
 func GetUsersHandler(store persistance.Client) gin.HandlerFunc {
-	type query struct {
+	type reqQuery struct {
 		Pagesize  int      `form:"limit" binding:"required"`
 		Pageindex string   `form:"marker" binding:"-"`
 		Sort      []string `form:"sort" binding:"-"`
@@ -85,7 +80,7 @@ func GetUsersHandler(store persistance.Client) gin.HandlerFunc {
 		Email     string   `form:"email" binding:"-"`
 	}
 	return func(c *gin.Context) {
-		var q query
+		var q reqQuery
 		err := c.BindQuery(&q)
 		if err != nil {
 			return
@@ -107,20 +102,15 @@ func GetUsersHandler(store persistance.Client) gin.HandlerFunc {
 
 // EditUserHandler provides the HTTP handler for editing a user
 func EditUserHandler(store persistance.Client) gin.HandlerFunc {
-	type body struct {
+	type reqBody struct {
 		Name  string `json:"name" validate:"required"`
 		Email string `json:"email" validate:"required,email"`
 	}
 	return func(c *gin.Context) {
-		inp := &body{}
+		inp := &reqBody{}
 		err := c.BindJSON(inp)
 		if err != nil {
 			c.AbortWithError(http.StatusBadRequest, err)
-			return
-		}
-
-		if ok, errs := utils.ValidateData(*inp); !ok {
-			c.AbortWithStatusJSON(http.StatusBadRequest, utils.JSONResponse(false, nil, errs))
 			return
 		}
 
